@@ -18,6 +18,11 @@ includes/
 
 *Используемая версия Python:* **3.14**.
 
+For Linux install `dev` version of python:
+```Shell
+sudo apt install python3.14-dev
+```
+
 ### 1. Создать виртуальное окружение
 ```Shell
 py -m venv .venv
