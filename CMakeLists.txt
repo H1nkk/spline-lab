@@ -5,7 +5,7 @@ project(SplineLab)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include_directories(include)
+include_directories(includes)
 
 file(GLOB SOURCES "src/*.cpp")
 
