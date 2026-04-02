@@ -2,12 +2,17 @@
 
 ## Структура проекта
 
-Тут структура проекта...
+*Файловая структура*
 ```
-src/
-    main.cpp
-includes/
-    idk_smtnhg.h
++---includes
+|       solver.h
+|
++---python
+|       main.py
+|
++---src
+|       main.cpp
+|       solver.cpp
 ```
 
 *Илюстрация архитектуры проекта*
@@ -18,7 +23,7 @@ includes/
 
 *Используемая версия Python:* **3.14**.
 
-For Linux install `dev` version of python:
+На Linux необходимо установить `dev` версию python:
 ```Shell
 sudo apt install python3.14-dev
 ```
