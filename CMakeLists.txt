@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(SplineLab)
+project(splinesolver)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,20 +50,20 @@ set(SOURCES
 # Create Python module
 if(PYBIND11_FOUND_VIA_CMAKE)
     # Use pybind11's built-in function (recommended)
-    pybind11_add_module(splinelab ${SOURCES})
+    pybind11_add_module(splinesolver ${SOURCES})
 else()
     # Manual module creation
-    add_library(splinelab MODULE ${SOURCES})
-    target_include_directories(splinelab PRIVATE ${PYBIND11_INCLUDE_DIR})
-    target_include_directories(splinelab PRIVATE ${Python_INCLUDE_DIRS})
-    target_link_libraries(splinelab ${Python_LIBRARIES})
+    add_library(splinesolver MODULE ${SOURCES})
+    target_include_directories(splinesolver PRIVATE ${PYBIND11_INCLUDE_DIR})
+    target_include_directories(splinesolver PRIVATE ${Python_INCLUDE_DIRS})
+    target_link_libraries(splinesolver ${Python_LIBRARIES})
 endif()
 
 # Add your project-specific include directories
-target_include_directories(splinelab PRIVATE includes)
+target_include_directories(splinesolver PRIVATE includes)
 
 # Set C++ standard for the target
-set_target_properties(splinelab PROPERTIES
+set_target_properties(splinesolver PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED ON
     POSITION_INDEPENDENT_CODE ON
@@ -71,26 +71,26 @@ set_target_properties(splinelab PROPERTIES
 
 # Set platform-specific module suffix
 if(WIN32)
-    set_target_properties(splinelab PROPERTIES SUFFIX ".pyd")
+    set_target_properties(splinesolver PROPERTIES SUFFIX ".pyd")
 elseif(APPLE)
-    set_target_properties(splinelab PROPERTIES SUFFIX ".so")
+    set_target_properties(splinesolver PROPERTIES SUFFIX ".so")
 else()
-    set_target_properties(splinelab PROPERTIES SUFFIX ".so")
+    set_target_properties(splinesolver PROPERTIES SUFFIX ".so")
 endif()
 
 # Auto-copy to python directory
 set(PYTHON_SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/python")
 file(MAKE_DIRECTORY ${PYTHON_SCRIPTS_DIR})
 
-add_custom_command(TARGET splinelab POST_BUILD
+add_custom_command(TARGET splinesolver POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:splinelab>
+        $<TARGET_FILE:splinesolver>
         ${PYTHON_SCRIPTS_DIR}
-    COMMENT "Copying splinelab module to ${PYTHON_SCRIPTS_DIR}"
+    COMMENT "Copying splinesolver module to ${PYTHON_SCRIPTS_DIR}"
 )
 
 # Optional: Show debug information
-message(STATUS "Building Python module: splinelab")
+message(STATUS "Building Python module: splinesolver")
 message(STATUS "Python version: ${Python_VERSION}")
 message(STATUS "Python includes: ${Python_INCLUDE_DIRS}")
 message(STATUS "Python libraries: ${Python_LIBRARIES}")
