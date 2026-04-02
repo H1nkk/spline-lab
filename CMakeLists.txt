@@ -5,68 +5,97 @@ project(SplineLab)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Python interpreter and development files
+# Find Python (required for pybind11)
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
 
-# Try to find pybind11 via CMake config first
-find_package(pybind11 CONFIG QUIET)
+# Find pybind11 using Python to get the correct paths
+execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import pybind11; print(pybind11.get_cmake_dir())"
+    OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
-if(NOT pybind11_FOUND)
-    # Fallback: find pybind11 in common virtual environment locations
+if(PYBIND11_CMAKE_DIR AND EXISTS ${PYBIND11_CMAKE_DIR})
+    set(pybind11_DIR ${PYBIND11_CMAKE_DIR})
+    find_package(pybind11 CONFIG REQUIRED)
+    set(PYBIND11_FOUND_VIA_CMAKE TRUE)
+    message(STATUS "Found pybind11 via Python module at: ${pybind11_DIR}")
+else()
+    message(STATUS "pybind11 not found via Python, trying manual method...")
+    # Fallback to manual method
     find_path(PYBIND11_INCLUDE_DIR
         NAMES pybind11/pybind11.h
         PATHS
+            # Linux/macOS paths
             ${CMAKE_CURRENT_SOURCE_DIR}/.venv/lib/python*/site-packages/pybind11/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/.venv/include
+            # Windows paths
             ${CMAKE_CURRENT_SOURCE_DIR}/.venv/Lib/site-packages/pybind11/include
             ${CMAKE_CURRENT_SOURCE_DIR}/.venv/include
         )
-    
     if(NOT PYBIND11_INCLUDE_DIR)
-        message(FATAL_ERROR "pybind11 not found. Please install it in your virtual environment.")
+        message(FATAL_ERROR "pybind11 not found. Please install it: pip install pybind11")
     endif()
+    set(PYBIND11_FOUND_VIA_CMAKE FALSE)
 endif()
 
-# List sources explicitly (avoid GLOB for better reliability)
+# List your source files
 set(SOURCES
     src/main.cpp
     src/solver.cpp
     # Add your other .cpp files here
 )
 
-add_executable(main ${SOURCES})
+# Create Python module
+if(PYBIND11_FOUND_VIA_CMAKE)
+    # Use pybind11's built-in function (recommended)
+    pybind11_add_module(splinelab ${SOURCES})
+else()
+    # Manual module creation
+    add_library(splinelab MODULE ${SOURCES})
+    target_include_directories(splinelab PRIVATE ${PYBIND11_INCLUDE_DIR})
+    target_include_directories(splinelab PRIVATE ${Python_INCLUDE_DIRS})
+    target_link_libraries(splinelab ${Python_LIBRARIES})
+endif()
+
+# Add your project-specific include directories
+target_include_directories(splinelab PRIVATE includes)
 
 # Set C++ standard for the target
-set_target_properties(main PROPERTIES
+set_target_properties(splinelab PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED ON
+    POSITION_INDEPENDENT_CODE ON
 )
 
-# Include directories
-target_include_directories(main PRIVATE includes)
-
-# Handle pybind11 and Python includes
-if(pybind11_FOUND)
-    # pybind11 config will automatically handle Python dependencies
-    target_link_libraries(main pybind11::headers)
-    target_link_libraries(main Python::Python)
-else()
-    # Manual setup
-    target_include_directories(main PRIVATE ${PYBIND11_INCLUDE_DIR})
-    target_include_directories(main PRIVATE ${Python_INCLUDE_DIRS})
-    target_link_libraries(main ${Python_LIBRARIES})
-endif()
-
-# Windows-specific: Set Python version for consistent searching
+# Set platform-specific module suffix
 if(WIN32)
-    # This helps CMake find the correct Python version
-    set(Python_FIND_REGISTRY "HKEY_CURRENT_USER HKEY_LOCAL_MACHINE")
+    set_target_properties(splinelab PROPERTIES SUFFIX ".pyd")
+elseif(APPLE)
+    set_target_properties(splinelab PROPERTIES SUFFIX ".so")
+else()
+    set_target_properties(splinelab PROPERTIES SUFFIX ".so")
 endif()
 
-# Optional: Show found paths for debugging
+# Auto-copy to python directory
+set(PYTHON_SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/python")
+file(MAKE_DIRECTORY ${PYTHON_SCRIPTS_DIR})
+
+add_custom_command(TARGET splinelab POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:splinelab>
+        ${PYTHON_SCRIPTS_DIR}
+    COMMENT "Copying splinelab module to ${PYTHON_SCRIPTS_DIR}"
+)
+
+# Optional: Show debug information
+message(STATUS "Building Python module: splinelab")
+message(STATUS "Python version: ${Python_VERSION}")
 message(STATUS "Python includes: ${Python_INCLUDE_DIRS}")
 message(STATUS "Python libraries: ${Python_LIBRARIES}")
-if(pybind11_FOUND)
-    message(STATUS "Using pybind11 config")
+if(PYBIND11_FOUND_VIA_CMAKE)
+    message(STATUS "Using pybind11 from: ${pybind11_DIR}")
 else()
-    message(STATUS "pybind11 include dir: ${PYBIND11_INCLUDE_DIR}")
+    message(STATUS "Using pybind11 include: ${PYBIND11_INCLUDE_DIR}")
 endif()
