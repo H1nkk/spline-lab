@@ -1,14 +1,18 @@
 #include <iostream>
 #include "solver.h"
 #include "pybind11/pybind11.h"
-#include <pybind11/stl.h>
-
-namespace py = pybind11;
+#include "pybind11/stl.h"
 
 // Create the pybind11 module
 PYBIND11_MODULE(splinesolver, m) {
     m.doc() = "Solves cubic splines";
     
-    // Wrap the return_0 function
-    m.def("solve_spline", &Solver::SolveSpline, "A function that solves a cubic spline and returns splie coefficients");
+    m.def("solve_spline", &Solver::SolveSpline,
+        pybind11::arg("x_list"), pybind11::arg("y_list")    
+    );
+}
+
+int main() {
+    std::cout << "Hello World!" << std::endl;
+    return 0;
 }
