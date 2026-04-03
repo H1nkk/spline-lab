@@ -1261,3 +1261,4 @@ dkms.conf
 # Raspberry Pi Pico disassembler file
 *.dis
 /.obsidian
+*.pyi
