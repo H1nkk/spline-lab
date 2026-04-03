@@ -1,3 +1,4 @@
-import splinesolver as sl
+import splinesolver
 
-print(sl.return_0())
+print (splinesolver.solve_spline(range(0, 10), range(0, 10)))
+

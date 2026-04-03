@@ -1,21 +1,14 @@
 #include <iostream>
 #include "solver.h"
 #include "pybind11/pybind11.h"
+#include <pybind11/stl.h>
 
-int return_0()
-{
-    return 0;
-}
+namespace py = pybind11;
 
 // Create the pybind11 module
 PYBIND11_MODULE(splinesolver, m) {
     m.doc() = "Solves cubic splines";
     
     // Wrap the return_0 function
-    m.def("return_0", &return_0, "A function that returns 0");
-}
-
-int main() {
-    std::cout << "Hello World!" << std::endl;
-    return 0;
+    m.def("solve_spline", &Solver::SolveSpline, "A function that solves a cubic spline and returns splie coefficients");
 }
