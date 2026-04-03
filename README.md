@@ -55,3 +55,9 @@ cmake ..
 ```bash
 cmake --build .
 ```
+
+### Intellisense для Vs Code
+Добавьте деректорию `./python` как дополнительный путь в `python.analysis.extraPaths`
+```json
+"python.analysis.extraPaths": ["${workspaceFolder}/python"]
+```

@@ -1,4 +1,6 @@
-import splinesolver as sl
+import splinesolver
+
+print (splinesolver.solve_spline(range(0, 10), range(0, 10)))
 
 # Пример использования сплайна
 x = [0.0, 1.0, 2.0]
