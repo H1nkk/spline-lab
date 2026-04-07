@@ -1,5 +1,6 @@
 # Binding c++ to python
 pybind11
+pybind11-stubgen # For Intellisense generation
 
 # User Interface
 plotly

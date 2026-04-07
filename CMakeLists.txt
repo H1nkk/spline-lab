@@ -89,7 +89,44 @@ add_custom_command(TARGET splinesolver POST_BUILD
     COMMENT "Copying splinesolver module to ${PYTHON_SCRIPTS_DIR}"
 )
 
-# Optional: Show debug information
+# Generate .pyi stub file using pybind11-stubgen
+find_program(PYBIND11_STUBGEN_EXECUTABLE pybind11-stubgen
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/.venv/Scripts
+          ${CMAKE_CURRENT_SOURCE_DIR}/.venv/bin
+)
+
+if(PYBIND11_STUBGEN_EXECUTABLE)
+    # Create a batch/PowerShell script for Windows
+    if(WIN32)
+        set(STUB_GEN_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/gen_stubs.bat")
+        file(WRITE ${STUB_GEN_SCRIPT} "
+@echo off
+set PYTHONPATH=${PYTHON_SCRIPTS_DIR}
+cd /d ${PYTHON_SCRIPTS_DIR}
+${PYBIND11_STUBGEN_EXECUTABLE} splinesolver -o ${PYTHON_SCRIPTS_DIR}
+")
+    else()
+        set(STUB_GEN_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/gen_stubs.sh")
+        file(WRITE ${STUB_GEN_SCRIPT} "
+#!/bin/bash
+export PYTHONPATH=${PYTHON_SCRIPTS_DIR}
+cd ${PYTHON_SCRIPTS_DIR}
+${PYBIND11_STUBGEN_EXECUTABLE} splinesolver -o ${PYTHON_SCRIPTS_DIR}
+")
+        file(CHMOD ${STUB_GEN_SCRIPT} PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+    endif()
+    
+    add_custom_target(generate_stubs ALL
+        COMMAND ${STUB_GEN_SCRIPT}
+        COMMENT "Generating .pyi stub file for splinesolver"
+        DEPENDS splinesolver
+    )
+    message(STATUS "Will generate stubs using pybind11-stubgen")
+else()
+    message(WARNING "pybind11-stubgen not found. Install with: pip install pybind11-stubgen")
+endif()
+
+# Show debug information
 message(STATUS "Building Python module: splinesolver")
 message(STATUS "Python version: ${Python_VERSION}")
 message(STATUS "Python includes: ${Python_INCLUDE_DIRS}")
