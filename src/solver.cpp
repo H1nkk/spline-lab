@@ -45,7 +45,7 @@ std::vector<std::tuple<double, double, double, double>> Solver::SolveSpline(std:
         B_list[i] = h;
 
         if (i <= n - 1)
-            phi_list[i] = 6.0 * ((y_list[i + 1] - y_list[i]) / h - (y_list[i] - y_list[i - 1]) / h);
+            phi_list[i] = -6.0 * ((y_list[i + 1] - y_list[i]) / h - (y_list[i] - y_list[i - 1]) / h);
     }
 
     // прямой ход прогонки
