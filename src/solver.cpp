@@ -12,7 +12,7 @@ std::vector<std::tuple<double, double, double, double>> Solver::SolveSpline(std:
     double h = x_list[1] - x_list[0];
 
     // граничные условия
-    double mu_1 = 0, mu_2 = 0;
+    double mu_1 = 0.0, mu_2 = 0.0;
 
     // Spline coefficients: размеры+1 для удобства
     std::vector<double> a_list(n + 1);
