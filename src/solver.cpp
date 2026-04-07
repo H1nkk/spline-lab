@@ -12,7 +12,7 @@ std::vector<std::tuple<double, double, double, double>> Solver::SolveSpline(std:
     double h = x_list[1] - x_list[0];
 
     // граничные условия
-    double mu_1 = 0.0, mu_2 = 12.0;
+    double mu_1 = 0, mu_2 = 12;
 
     // Spline coefficients: размеры+1 для удобства
     std::vector<double> a_list(n + 1);
@@ -41,21 +41,19 @@ std::vector<std::tuple<double, double, double, double>> Solver::SolveSpline(std:
     // заполняем матрицу коэффициентов и вектор, задающие СЛАУ
     for (int i = 1; i <= n; i++) {
         A_list[i] = h;
-        C_list[i] = 2.0 * (h + h);
+        C_list[i] = -2.0 * (h + h);
         B_list[i] = h;
 
         if (i <= n - 1)
-            phi_list[i] = 6.0 * ((y_list[i + 1] - y_list[i]) / h - (y_list[i] - y_list[i - 1]) / h);
+            phi_list[i] = -6.0 * ((y_list[i + 1] - y_list[i]) / h - (y_list[i] - y_list[i - 1]) / h);
     }
 
     // прямой ход прогонки
     alpha_list[1] = kappa_1;
     beta_list[1] = mu_1;
     for (int i = 1; i < n; i++) {
-        double denom = C_list[i] + A_list[i] * alpha_list[i];
-
-        alpha_list[i + 1] = -B_list[i] / denom;
-        beta_list[i + 1] = (phi_list[i] - A_list[i] * beta_list[i]) / denom;
+        alpha_list[i + 1] = B_list[i] / (C_list[i] - alpha_list[i] * A_list[i]);
+        beta_list[i + 1] = (phi_list[i] + A_list[i] * beta_list[i]) / (C_list[i] - alpha_list[i] * A_list[i]);
     }
 
     // обратный ход прогонки в случае, когда kappa_2 = 0
