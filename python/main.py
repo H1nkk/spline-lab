@@ -59,7 +59,31 @@ def build_spline(coefs : list[tuple[float, float, float, float]],
         x = original_x_list[section] + spline_render_step
         
     return spline_x, spline_y
+
+# Evaluates the difference between analytical and interpolated
+def error_eval( function : Callable, coefs : list[tuple[float, float, float, float]], 
+                original_x_list : list[float],
+                original_y_list : list[float],
+                eval_step : float) -> float:
+
+    errors = []
     
+    section = 0
+    x = original_x_list[0] + eval_step
+    
+    while section < len(original_x_list) - 1:
+        while x < original_x_list[section + 1] - 1e-10:
+            analytical = function(x)
+            spline = calculate_spline_point(x, original_x_list[section + 1], coefs[section])
+            errors.append(abs(analytical - spline))
+            
+            x += eval_step
+            
+        section += 1
+        x = original_x_list[section] + eval_step
+        
+    return max(errors)
+
 
 # Running calculations, returns spline points, sampled points and coefficients
 def run(sample_function : Callable, 
@@ -97,6 +121,7 @@ with st.sidebar:
     x_min = st.number_input("X Minimum", value=0.2, step=0.1, format="%.2f", key="x_min")
     x_max = st.number_input("X Maximum", value=2.0, step=0.1, format="%.2f", key="x_max")
     step = st.number_input("Sampling Step", value=0.2, min_value=0.05, max_value=1.0, step=0.05, format="%.3f", key="step")
+    error_eval_step = st.number_input("Error Eval Step", value=0.01, min_value=0.0001, max_value=0.1, step=0.01, format="%.3f", key="error_step")
     spline_render_step = st.number_input("Spline Render Step", value=0.001, min_value=0.0001, max_value=0.01, step=0.0005, format="%.4f", key="render_step")
     
     if x_min >= x_max:
@@ -114,6 +139,7 @@ if build_button:
         with st.spinner("Calculating spline..."):
             try:
                 spline_x, spline_y, sample_x, sample_y, coefs = run(func, x_min, x_max, step, spline_render_step)
+                error = error_eval(func, coefs, sample_x, sample_y, error_eval_step)
                 
                 # Store in session state
                 st.session_state.spline_data = {
@@ -125,7 +151,9 @@ if build_button:
                     'x_min': x_min,
                     'x_max': x_max,
                     'step': step,
-                    'spline_render_step': spline_render_step
+                    'spline_render_step': spline_render_step,
+                    'error_eval_step' : error_eval_step,
+                    'error' : error
                 }
                 
             except Exception as e:
@@ -140,6 +168,7 @@ if st.session_state.spline_data is not None:
     coefs = data['coefs']
     sample_x = data['sample_x']
     sample_y = data['sample_y']
+    error = data['error']
     
     # PLOT
     
@@ -197,7 +226,8 @@ if st.session_state.spline_data is not None:
     
     st.dataframe(coef_data, use_container_width=True)
     
-    # st.subheader("Error Data")
+    st.subheader("Error Data")
+    st.info(f"Error: {error}")
     
     # # Display coefficients
     # coef_data = []
