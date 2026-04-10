@@ -132,8 +132,6 @@ def run(sample_function : Callable,
         spline_render_step : float) -> SplineData:
     
     x_list, y_list = generate_points(sample_function, x_min, x_max, step)
-    print(x_list)
-    print(y_list)
     coefs = splinesolver.solve_spline(x_list, y_list)
     
     return_data = SplineData()
@@ -147,7 +145,27 @@ def run(sample_function : Callable,
     
     return return_data
 
+# TEST FUNCTION
+# Function that we will be interpolating
+def test_func(x):
+    if x <= 0:
+        return pow(x, 3) + 3 * pow(x, 2)
+    else:
+        return -1 * pow(x, 3) + 3 * pow(x, 2)
 
+def test_func_der(x):
+    if x <= 0:
+        return 3 * pow(x, 2) + 6 * x
+    else:
+        return -3 * pow(x, 2) + 6 * x
+
+def test_func_der_der(x):
+    if x <= 0:
+        return 6 * x + 6
+    else:
+        return -6 * x + 6 * x
+
+# MAIN FUNCTION
 # Function that we will be interpolating
 def func(x):
     return math.log(x + 1) / (x + 1)
@@ -159,6 +177,19 @@ def func_der(x):
 def func_der_der(x):
     denominator = x**3 + 3*x**2 + 3*x + 1
     return (2 * math.log(x + 1) - 3) / denominator
+
+# MAIN FUNCTION OSCILATION
+# Function that we will be interpolating
+def oscl_func(x):
+    return math.log(x + 1) / (x + 1) + math.cos(10 * x)
+
+def oscl_func_der(x):
+    denominator = (x + 1)**2
+    return (1 - math.log(x + 1)) / denominator - 10 * math.sin(10 * x)
+
+def oscl_func_der_der(x):
+    denominator = x**3 + 3*x**2 + 3*x + 1
+    return (2 * math.log(x + 1) - 3) / denominator - 100 * math.cos(10 * x)
 
 # STREAM LIT
 
@@ -175,9 +206,14 @@ with st.sidebar:
     st.header("Параметры")
     
     # Input parameters
+    function_select = st.selectbox(
+    "Выберите функцию",
+    ("Тестовая", "Основная", "Осцилирующая")
+    )
+    
     x_min = st.number_input("X Minimum", value=0.2, step=0.1, format="%.2f", key="x_min")
     x_max = st.number_input("X Maximum", value=2.0, step=0.1, format="%.2f", key="x_max")
-    step = st.number_input("Шаг", value=0.2, min_value=0.0001, max_value=1.0, step=0.05, format="%.3f", key="step")
+    num_nodes = st.number_input("Кол-во узлов", value=5, min_value=2, step=1, key="num_nodes")
     error_eval_step = st.number_input("Шаг контрольной сетки", value=0.01, min_value=0.0001, max_value=0.1, step=0.001, format="%.3f", key="error_step")
     spline_render_step = 0.0001
     
@@ -185,7 +221,7 @@ with st.sidebar:
         st.error("X Minimum должно быть строго меньше X Maximum")
     
     # Build button
-    build_button = st.button("Построить Сплайн", type="primary", use_container_width=True)
+    build_button = st.button("Построить Сплайн", type="primary", width='stretch')
 
 
 # Build button press event
@@ -195,18 +231,35 @@ if build_button:
     else:
         with st.spinner("Calculating spline..."):
             try:
-                spline_data = run(func, x_min, x_max, step, spline_render_step)
-                error = error_eval(func, func_der, func_der_der, spline_data.coefs, spline_data.sample_x, error_eval_step)
+                if function_select == "Тестовая":
+                    function = test_func
+                    function_der = test_func_der
+                    function_der_der = test_func_der_der
+                
+                elif function_select == "Основная":
+                    function = func
+                    function_der = func_der
+                    function_der_der = func_der_der
+                    
+                elif function_select == "Осцилирующая":
+                    function = oscl_func
+                    function_der = oscl_func_der
+                    function_der_der = oscl_func_der_der
+                    
+                spline_data = run(function, x_min, x_max, (x_max - x_min) / (num_nodes - 1), spline_render_step)
+                error = error_eval(function, function_der, function_der_der, spline_data.coefs, spline_data.sample_x, error_eval_step)
                 
                 # Store in session state
                 st.session_state.spline_data = {
                     'spline_data': spline_data,
                     'x_min': x_min,
                     'x_max': x_max,
-                    'step': step,
                     'spline_render_step': spline_render_step,
                     'error_eval_step' : error_eval_step,
-                    'error_data' : error
+                    'error_data' : error,
+                    'function': function,
+                    'function_der': function_der,
+                    'function_der_der': function_der_der
                 }
                 
             except Exception as e:
@@ -218,7 +271,9 @@ if st.session_state.spline_data is not None:
     data = st.session_state.spline_data
     spline_data : SplineData = data['spline_data']
     error_data : ErrorData = data['error_data']
-    
+    function : Callable = data['function']
+    function_der : Callable = data['function_der']
+    function_der_der : Callable = data['function_der_der']
     # PLOT
     
     st.subheader("Графики")
@@ -232,7 +287,7 @@ if st.session_state.spline_data is not None:
     ))
     
     # Original function points
-    original_y = [func(x) for x in spline_data.spline_x]
+    original_y = [function(x) for x in spline_data.spline_x]
     fig.add_trace(graph.Scatter(
         x=spline_data.spline_x, y=original_y, 
         mode='lines', 
@@ -260,7 +315,7 @@ if st.session_state.spline_data is not None:
         )
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     fig = graph.Figure()
     
@@ -271,7 +326,7 @@ if st.session_state.spline_data is not None:
         name="S'"
     ))
     
-    original_der_y = [func_der(x) for x in spline_data.spline_x]
+    original_der_y = [function_der(x) for x in spline_data.spline_x]
     fig.add_trace(graph.Scatter(
         x=spline_data.spline_x, y=original_der_y, 
         mode='lines', 
@@ -292,7 +347,7 @@ if st.session_state.spline_data is not None:
         )
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     fig = graph.Figure()
     
@@ -303,7 +358,7 @@ if st.session_state.spline_data is not None:
         name="S''"
     ))
     
-    original_der_der_y = [func_der_der(x) for x in spline_data.spline_x]
+    original_der_der_y = [function_der_der(x) for x in spline_data.spline_x]
     fig.add_trace(graph.Scatter(
         x=spline_data.spline_x, y=original_der_der_y, 
         mode='lines', 
@@ -324,7 +379,7 @@ if st.session_state.spline_data is not None:
         )
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     st.subheader("Справка")
     
@@ -396,7 +451,7 @@ if st.session_state.spline_data is not None:
         )
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Display coefficients
     error_eval_data = []
