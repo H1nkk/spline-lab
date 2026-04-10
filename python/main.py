@@ -163,7 +163,7 @@ def test_func_der_der(x):
     if x <= 0:
         return 6 * x + 6
     else:
-        return -6 * x + 6 * x
+        return -6 * x + 6
 
 # MAIN FUNCTION
 # Function that we will be interpolating
