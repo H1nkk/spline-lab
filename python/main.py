@@ -99,9 +99,11 @@ def build_spline(coefs : list[tuple[float, float, float, float]],
 def error_eval( function : Callable, function_der : Callable, function_der_der : Callable, 
                 coefs : list[tuple[float, float, float, float]], 
                 original_x_list : list[float],
-                eval_step : float) -> ErrorData:
+                num_control_nodes : int) -> ErrorData:
     
     data = ErrorData()
+    
+    xstep = (original_x_list[-1] - original_x_list[0]) / num_control_nodes
     
     section = 0
     x = original_x_list[0]
@@ -118,10 +120,9 @@ def error_eval( function : Callable, function_der : Callable, function_der_der :
             data.spline_der_y.append(calculate_spline_der_point(x, original_x_list[section + 1], coefs[section]))
             data.spline_der_der_y.append(calculate_spline_der_der_point(x, original_x_list[section + 1], coefs[section]))
             
-            x += eval_step
+            x += xstep
             
         section += 1
-        x = original_x_list[section]
         
     return data
 
@@ -214,7 +215,7 @@ with st.sidebar:
     x_min = st.number_input("X Minimum", value=0.2, step=0.1, format="%.2f", key="x_min")
     x_max = st.number_input("X Maximum", value=2.0, step=0.1, format="%.2f", key="x_max")
     num_nodes = st.number_input("Кол-во узлов", value=5, min_value=2, step=1, key="num_nodes")
-    error_eval_step = st.number_input("Шаг контрольной сетки", value=0.01, min_value=0.0001, max_value=0.1, step=0.001, format="%.3f", key="error_step")
+    num_control_nodes = st.number_input("Узлы контрольной сетки", value=100, min_value=10, step=1, key="control_nodes")
     spline_render_step = 0.0001
     
     if x_min >= x_max:
@@ -247,7 +248,7 @@ if build_button:
                     function_der_der = oscl_func_der_der
                     
                 spline_data = run(function, x_min, x_max, (x_max - x_min) / (num_nodes - 1), spline_render_step)
-                error = error_eval(function, function_der, function_der_der, spline_data.coefs, spline_data.sample_x, error_eval_step)
+                error = error_eval(function, function_der, function_der_der, spline_data.coefs, spline_data.sample_x, num_control_nodes)
                 
                 # Store in session state
                 st.session_state.spline_data = {
@@ -255,7 +256,6 @@ if build_button:
                     'x_min': x_min,
                     'x_max': x_max,
                     'spline_render_step': spline_render_step,
-                    'error_eval_step' : error_eval_step,
                     'error_data' : error,
                     'function': function,
                     'function_der': function_der,
@@ -383,7 +383,7 @@ if st.session_state.spline_data is not None:
     
     st.subheader("Справка")
     
-    st.info(f"Сетка сплайна: {len(spline_data.coefs)}")
+    st.info(f"Сетка сплайна: {len(spline_data.sample_x)}")
     st.info(f"Контрольная сетка: {len(error_data.x)}")
     
     st.info(f"Погрешность сплайна на контрольной сетке: \
@@ -411,6 +411,26 @@ if st.session_state.spline_data is not None:
             "c": f"{c:.4f}",
             "d": f"{d:.4f}"
         })
+        
+    column_config = {
+        "i": st.column_config.NumberColumn(
+            "i"
+        ),
+        "X i-1": st.column_config.NumberColumn(
+            "X i-1",
+            format="%.5f"
+        ),
+        "X i": st.column_config.NumberColumn(
+            "X i",
+            format="%.5f"
+        )
+    }
+    
+    for i in ["a", "b", "c", "d"]:
+        column_config[i] = st.column_config.NumberColumn(
+            i,
+            format="%.15f"
+        )
     
     st.dataframe(coef_data, width='stretch')
     
@@ -471,5 +491,21 @@ if st.session_state.spline_data is not None:
             "S''(Xj)": error_data.spline_der_der_y[i],
             "F''(Xj) - S''(Xj)": error_data.sample_der_der_y[i] - error_data.spline_der_der_y[i],
         })
+        
+    column_config = {
+        "j": st.column_config.NumberColumn(
+            "j"
+        ),
+        "X j": st.column_config.NumberColumn(
+            "X j",
+            format="%.5f"
+        )
+    }
     
-    st.dataframe(error_eval_data, width='stretch')
+    for i in ["F(Xj)", "S(Xj)", "F(Xj) - S(Xj)", "F'(Xj)", "S'(Xj)", "F'(Xj) - S'(Xj)", "F''(Xj)", "S''(Xj)", "F''(Xj) - S''(Xj)"]:
+        column_config[i] = st.column_config.NumberColumn(
+            i,
+            format="%.15f"
+        )
+    
+    st.dataframe(error_eval_data, width='stretch', column_config=column_config)
